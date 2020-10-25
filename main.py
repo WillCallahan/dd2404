@@ -5,7 +5,7 @@ from reportlab.lib.enums import TA_LEFT, TA_CENTER
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, PageBreak
 
 log = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ base_table_input_style = [
     ('FONTSIZE', (0, 0), (-1, -1), 8),
 ]
 
-base_input_row_height = 8.5 * mm
+base_input_row_height = 8.75 * mm
 base_table_width = int((letter[0] - (11 * mm * 2)) - mm - 2)
 
 
@@ -325,13 +325,6 @@ def get_item_table():
 
 
 def get_footer():
-    header_text_style = ParagraphStyle(
-        name = 'Footer',
-        alignment = TA_CENTER,
-        leading = 8,
-        fontSize = 8
-    )
-
     data_header = [
         [
             'DA FORM 2404, FEB 2011',
@@ -361,6 +354,84 @@ def get_footer():
     return table_header
 
 
+def get_supplementary_sheet():
+    font_size = 8
+    column_widths = [
+        base_table_width * 0.07,
+        base_table_width * 0.07,
+        base_table_width * 0.37,
+        base_table_width * 0.37,
+        base_table_width * 0.12
+    ]
+
+    signature_text_style = ParagraphStyle(name = 'Item Header', alignment = TA_CENTER, leading = font_size,
+                                          fontSize = font_size)
+    header_data = [
+        [
+            'TM ITEM NO.<br/><i>a</i>',
+            '<br/>STATUS<br/><br/><i>b</i>',
+            '<br/>DEFICIENCIES AND SHORTCOMINGS<br/><br/><i>c</i>',
+            '<br/>CORRECTIVE ACTION<br/><br/><i>d</i>',
+            'INITIAL<br/>WHEN<br/>CORRECTED<br/><i>e</i>',
+        ]
+    ]
+    header_table_style_tuples = [
+        *base_table_input_style,
+        ('LINEABOVE', (0, 0), (-1, 0), 1, colors.black),
+        ('LINEAFTER', (4, 0), (4, 0), 1, colors.black),
+        ('LEFTPADDING', (1, 0), (1, 0), 0, colors.black),
+        ('RIGHTPADDING', (1, 0), (1, 0), 0, colors.black),
+    ]
+    header_table_style = TableStyle(header_table_style_tuples)
+    header_table = Table(
+        [[Paragraph(item, signature_text_style) for item in row] for row in header_data],
+        rowHeights = [(font_size * 4) + 4 for i in range(1)],
+        colWidths = column_widths
+    )
+    header_table.setStyle(header_table_style)
+
+    data = [['' for item in range(5)] for row in range(1, 28)]
+    data_table_style_tuples = [
+        *base_table_input_style,
+        ('LINEAFTER', (4, 0), (4, -1), 1, colors.black),
+        ('LINEBELOW', (0, -1), (-1, -1), 1, colors.black),
+        ('LEFTPADDING', (1, 0), (1, 0), 0, colors.black),
+        ('RIGHTPADDING', (1, 0), (1, 0), 0, colors.black),
+    ]
+    data_table_style = TableStyle(data_table_style_tuples)
+    data_table = Table(
+        data,
+        rowHeights = base_input_row_height,
+        colWidths = column_widths
+    )
+    data_table.setStyle(data_table_style)
+
+    footer_data = [
+        [
+            'DA FORM 2404, FEB 2011',
+            'APD LC v1.00ES'
+        ]
+    ]
+    footer_table_style_tuples = [
+        ('FONTSIZE', (0, 0), (0, 0), 8),
+        ('FONT', (0, 0), (0, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (1, 0), (1, 0), 6),
+        ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+        ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+        ('TOPPADDING', (0, 0), (1, 0), 1),
+        ('LEFTPADDING', (0, 0), (1, 0), 1),
+        ('RIGHTPADDING', (0, 0), (1, 0), 1),
+    ]
+    footer_table_style = TableStyle(footer_table_style_tuples)
+    footer_table = Table(
+        footer_data,
+        colWidths = [base_table_width / 2 for item in range(2)]
+    )
+    footer_table.setStyle(footer_table_style)
+
+    return [header_table, data_table, footer_table]
+
+
 def create_2404():
     margin = 10 * mm
 
@@ -370,7 +441,7 @@ def create_2404():
         leftMargin = margin,
         rightMargin = margin,
         topMargin = margin,
-        bottomMargin = margin
+        bottomMargin = margin - (4 * mm)
     )
     story = [
         get_header(),
@@ -379,7 +450,9 @@ def create_2404():
         *get_status_symbols(),
         get_signature(),
         *get_item_table(),
-        get_footer()
+        get_footer(),
+        PageBreak(),
+        *get_supplementary_sheet()
     ]
 
     # can = canvas.Canvas("something.pdf")
