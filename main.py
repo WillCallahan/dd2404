@@ -1,18 +1,18 @@
 import logging
+
 from reportlab.lib import colors
-from reportlab.lib.units import mm, inch, pica
+from reportlab.lib.enums import TA_LEFT, TA_CENTER
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Spacer, Paragraph
 from reportlab.lib.styles import ParagraphStyle
-from reportlab.pdfgen import canvas
-from reportlab.lib.enums import TA_JUSTIFY, TA_LEFT, TA_CENTER, TA_RIGHT
+from reportlab.lib.units import mm
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 
 log = logging.getLogger(__name__)
 
 base_table_input_style = [
     ('LINEABOVE', (0, 0), (-1, -1), 0.25, colors.black),
     ('INNERGRID', (0, 0), (-1, -1), 0.25, colors.black),
-    ('LINEBEFORE', (0, 0), (0, 0), 1, colors.black),
+    ('LINEBEFORE', (0, 0), (0, -1), 1, colors.black),
     ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
     ('VALIGN', (0, 0), (-1, -1), 'TOP'),
     ('TOPPADDING', (0, 0), (-1, -1), 0),
@@ -20,7 +20,7 @@ base_table_input_style = [
     ('FONTSIZE', (0, 0), (-1, -1), 8),
 ]
 
-base_input_row_height = 9 * mm
+base_input_row_height = 8.5 * mm
 base_table_width = int((letter[0] - (11 * mm * 2)) - mm - 2)
 
 
@@ -75,7 +75,7 @@ def get_header_data():
     ]
     table_style_tuples_line_2 = [
         *base_table_input_style,
-        ('LINEAFTER', (len(data_raw_line_2[0]) - 1, 0), (len(data_raw_line_2[0]) - 1, 0), 1, colors.black),
+        ('LINEAFTER', (-1, 0), (-1, 0), 1, colors.black),
     ]
     table_style_line_2 = TableStyle(table_style_tuples_line_2)
     data_line_2 = [[Paragraph(item, text_style) for item in row] for row in data_raw_line_2]
@@ -241,7 +241,7 @@ def get_status_symbols():
 
 
 def get_signature():
-    signature_text_style = ParagraphStyle(name = 'Data Input', alignment = TA_LEFT, leading = 8, fontSize = 8)
+    signature_text_style = ParagraphStyle(name = 'Signature Input', alignment = TA_LEFT, leading = 8, fontSize = 8)
     signature_data = [
         ['8<i>a</i>. SIGNATURE <font size=7><i>(Person(s) performing inspection)</i></font>',
          '8<i>b</i>. TIME',
@@ -271,6 +271,96 @@ def get_signature():
     return signature_table
 
 
+def get_item_table():
+    font_size = 8
+    column_widths = [
+        base_table_width * 0.07,
+        base_table_width * 0.07,
+        base_table_width * 0.37,
+        base_table_width * 0.37,
+        base_table_width * 0.12
+    ]
+    signature_text_style = ParagraphStyle(name = 'Item Header', alignment = TA_CENTER, leading = font_size,
+                                          fontSize = font_size)
+    header_data = [
+        [
+            'TM ITEM NO.<br/><i>a</i>',
+            '<br/>STATUS<br/><br/><i>b</i>',
+            '<br/>DEFICIENCIES AND SHORTCOMINGS<br/><br/><i>c</i>',
+            '<br/>CORRECTIVE ACTION<br/><br/><i>d</i>',
+            'INITIAL<br/>WHEN<br/>CORRECTED<br/><i>e</i>',
+        ]
+    ]
+    header_table_style_tuples = [
+        *base_table_input_style,
+        ('LINEAFTER', (4, 0), (4, 0), 1, colors.black),
+        ('LEFTPADDING', (1, 0), (1, 0), 0, colors.black),
+        ('RIGHTPADDING', (1, 0), (1, 0), 0, colors.black),
+    ]
+    header_table_style = TableStyle(header_table_style_tuples)
+    header_table = Table(
+        [[Paragraph(item, signature_text_style) for item in row] for row in header_data],
+        rowHeights = [(font_size * 4) + 4 for i in range(1)],
+        colWidths = column_widths
+    )
+    header_table.setStyle(header_table_style)
+
+    data = [['' for item in range(5)] for row in range(1, 14)]
+    data_table_style_tuples = [
+        *base_table_input_style,
+        ('LINEAFTER', (4, 0), (4, -1), 1, colors.black),
+        ('LINEBELOW', (0, -1), (-1, -1), 1, colors.black),
+        ('LEFTPADDING', (1, 0), (1, 0), 0, colors.black),
+        ('RIGHTPADDING', (1, 0), (1, 0), 0, colors.black),
+    ]
+    data_table_style = TableStyle(data_table_style_tuples)
+    data_table = Table(
+        data,
+        rowHeights = base_input_row_height,
+        colWidths = column_widths
+    )
+    data_table.setStyle(data_table_style)
+
+    return [header_table, data_table]
+
+
+def get_footer():
+    header_text_style = ParagraphStyle(
+        name = 'Footer',
+        alignment = TA_CENTER,
+        leading = 8,
+        fontSize = 8
+    )
+
+    data_header = [
+        [
+            'DA FORM 2404, FEB 2011',
+            'PREVIOUS EDITIONS ARE OBSOLETE.',
+            'APD LC v1.00ES'
+        ]
+    ]
+    table_style_tuples_header = [
+        ('FONTSIZE', (0, 0), (0, 0), 10),
+        ('FONT', (0, 0), (0, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (1, 0), (1, 0), 8),
+        ('FONTSIZE', (2, 0), (2, 0), 6),
+        ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+        ('ALIGN', (1, 0), (1, 0), 'CENTER'),
+        ('ALIGN', (2, 0), (2, 0), 'RIGHT'),
+        ('TOPPADDING', (0, 0), (2, 0), 1),
+        ('LEFTPADDING', (0, 0), (2, 0), 1),
+        ('RIGHTPADDING', (0, 0), (2, 0), 1),
+    ]
+    table_header_style = TableStyle(table_style_tuples_header)
+    table_header = Table(
+        data_header,
+        colWidths = [base_table_width / 3 for item in range(3)]
+    )
+    table_header.setStyle(table_header_style)
+
+    return table_header
+
+
 def create_2404():
     margin = 10 * mm
 
@@ -287,7 +377,9 @@ def create_2404():
         *get_header_data(),
         *get_applicable_reference(),
         *get_status_symbols(),
-        get_signature()
+        get_signature(),
+        *get_item_table(),
+        get_footer()
     ]
 
     # can = canvas.Canvas("something.pdf")
